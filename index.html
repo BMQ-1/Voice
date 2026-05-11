@@ -325,9 +325,9 @@ body {
 
 // ── State Object ──
 const App = {
-  mediaRecorder: null, audioChunks: [], currentBlob: null, currentObjectUrl: null,
+  mediaRecorder: null, audioChunks:[], currentBlob: null, currentObjectUrl: null,
   currentAudioEl: null, timerInterval: null, seconds: 0, state: 'idle', everRecorded: false,
-  recordings: [], activePlayingId: null, playingAudio: null, playingObjectUrl: null,
+  recordings:[], activePlayingId: null, playingAudio: null, playingObjectUrl: null,
   animFrameId: null, analyser: null, dataArray: null, audioCtx: null, playbackSpeed: 1,
   MAX_DURATION: 3600, stopping: false, loopPlayback: false, modalActive: false
 };
@@ -439,7 +439,7 @@ async function getCryptoKey(password, saltUint8) {
   const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: saltUint8, iterations: 100000, hash: "SHA-256" },
-    keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+    keyMaterial, { name: "AES-GCM", length: 256 }, false,["encrypt", "decrypt"]
   );
 }
 async function encryptPayload(base64Str, key) {
@@ -471,7 +471,7 @@ function vibrate(pattern = 50) { if (navigator.vibrate) { try { navigator.vibrat
 
 // ── Waveform bars & Ambient Idle ──
 const waveformEl = document.getElementById('waveform');
-const BAR_COUNT = 54; const bars = [];
+const BAR_COUNT = 54; const bars =[];
 for (let i = 0; i < BAR_COUNT; i++) {
   const b = document.createElement('div'); b.className = 'bar';
   waveformEl.appendChild(b); bars.push(b);
@@ -516,7 +516,7 @@ function pad(n) { return String(n).padStart(2,'0'); }
 
 // ── Get Supported Mime-Type ──
 function getSupportedMimeType() {
-  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/wav', 'audio/aac'];
+  const types =['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/wav', 'audio/aac'];
   for (const t of types) { if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; }
   return 'audio/webm';
 }
@@ -538,7 +538,7 @@ async function startRecording() {
     src.connect(App.analyser); App.dataArray = new Uint8Array(App.analyser.frequencyBinCount);
     const mime = getSupportedMimeType();
     App.mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
-    App.audioChunks = [];
+    App.audioChunks =[];
     App.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) App.audioChunks.push(e.data); };
     App.mediaRecorder.onstop = onRecordingStop;
     App.stopping = false; App.mediaRecorder.start(100); App.seconds = 0;
@@ -565,7 +565,7 @@ function onRecordingStop() {
   App.stopping = false;
   const mime = App.mediaRecorder?.mimeType || getSupportedMimeType();
   App.currentBlob = new Blob(App.audioChunks, { type: mime });
-  App.audioChunks = []; // Free memory
+  App.audioChunks =[]; // Free memory
   setState('done');
 }
 
@@ -633,7 +633,7 @@ async function exportBackup() {
       let payload = await blobToBase64(r.blob); if (key) payload = await encryptPayload(payload, key);
       return { id: r.id, name: r.name, duration: r.duration, date: r.date, mimeType: r.blob.type, payload: payload, encrypted: !!key };
     }));
-    const backupObj = { app: 'LocalVoiceRecorderBackup', version: 4, timestamp: Date.now(), salt: saltB64, data: serialized };
+    const backupObj = { app: 'LocalVoiceRecorderBackup', version: 5, timestamp: Date.now(), salt: saltB64, data: serialized };
     const blob = new Blob([JSON.stringify(backupObj)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `نسخة_محمية_${new Date().toISOString().slice(0,10)}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 3000); showToast('✓ تم تحميل النسخة الاحتياطية بنجاح');
@@ -641,9 +641,11 @@ async function exportBackup() {
 }
 async function importBackup(e) {
   const file = e.target.files[0]; if (!file) return;
+  if (file.size > 50 * 1024 * 1024) { showToast('⚠️ الملف كبير جداً (الحد الأقصى 50 ميجابايت)'); e.target.value = ''; return; }
   try {
     showToast('جاري فحص الملف الاحتياطي…'); const text = await file.text(); const parsed = JSON.parse(text);
     if (parsed.app !== 'LocalVoiceRecorderBackup' || !Array.isArray(parsed.data)) throw new Error('الملف غير متطابق');
+    if (parsed.version > 5) throw new Error('هذه النسخة أحدث من الإصدار الحالي للتطبيق');
     let key = null;
     if (parsed.data.some(d => d.encrypted)) {
       const pwd = await showModal({ type: 'password', title: 'فك التشفير', desc: 'النسخة محمية بكلمة مرور. الرجاء إدخالها للاستعادة.', confirmText: 'استعادة' });
@@ -739,7 +741,7 @@ function renderList() {
       </div></div>`;
   }).join('');
 }
-function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(t) { return typeof t === 'string' ? t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
 // ── Storage indicator ──
 function formatBytes(b) { if (b < 1024) return b + ' B'; if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB'; return (b/(1024*1024)).toFixed(1) + ' MB'; }
@@ -760,7 +762,25 @@ function resetToIdle() { App.seconds = 0; const timerEl = document.getElementByI
 let toastTimer; function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
 
 // ── Keyboard ──
-function handleKeydown(e) { if (App.modalActive || e.target.tagName === 'INPUT') return; if (e.code === 'Space') { e.preventDefault(); if (App.state === 'idle') startRecording(); else if (App.state === 'recording') pauseRecording(); else if (App.state === 'paused') resumeRecording(); } if (e.code === 'Escape') { if (App.state === 'recording' || App.state === 'paused') stopRecording(); else if (App.state === 'done') discardCurrent(); } if (e.key.toLowerCase() === 's' && App.state === 'done') saveRecording(); }
+function handleKeydown(e) { 
+  if (App.modalActive ||['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return; 
+  if (e.code === 'Space') { 
+    e.preventDefault(); 
+    if (App.state === 'idle') startRecording(); 
+    else if (App.state === 'recording') pauseRecording(); 
+    else if (App.state === 'paused') resumeRecording(); 
+  } 
+  if (e.code === 'Escape') { 
+    if (App.state === 'recording' || App.state === 'paused') stopRecording(); 
+    else if (App.state === 'done') { 
+      if (App.currentAudioEl && !App.currentAudioEl.paused) { 
+        App.currentAudioEl.pause(); revokeCurrentUrl(); setBtnPlayCurrent(false); return; 
+      } 
+      discardCurrent(); 
+    } 
+  } 
+  if (e.key.toLowerCase() === 's' && App.state === 'done') saveRecording(); 
+}
 
 // ── Gestures (Swipe & Long Press) ──
 let swipeStartX=0, swipeCurrentX=0, swipedItem=null, isPointerDown=false, longPressTimer=null;
@@ -803,11 +823,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnExportAll').addEventListener('click', exportAllRecordings); document.getElementById('btnBackupExport').addEventListener('click', exportBackup); document.getElementById('btnBackupImport').addEventListener('click', () => { document.getElementById('backupFileInput').click(); }); document.getElementById('backupFileInput').addEventListener('change', importBackup);
   document.getElementById('loopBtn').addEventListener('click', toggleLoop); document.getElementById('spd05').addEventListener('click', () => setSpeed(0.5)); document.getElementById('spd1').addEventListener('click', () => setSpeed(1)); document.getElementById('spd15').addEventListener('click', () => setSpeed(1.5)); document.getElementById('spd2').addEventListener('click', () => setSpeed(2));
   document.getElementById('recordingsList').addEventListener('click', e => { const btn = e.target.closest('[data-action]'); if (!btn) return; const id = parseInt(btn.dataset.id, 10); const action = btn.dataset.action; if (action === 'play') togglePlayRec(id); else if (action === 'download') downloadRec(id); else if (action === 'rename') startRename(id); else if (action === 'delete') deleteRec(id); });
-  document.addEventListener('keydown', handleKeydown); initGestures(); animateIdle();
+  document.addEventListener('keydown', handleKeydown); initGestures(); 
+  
+  setState('idle'); // Initialize default UI & Ambient animation safely
 
-  if (navigator.storage?.persist) { const granted = await navigator.storage.persist(); if (!granted) showToast('⚠️ قد يحذف المتصفح البيانات مستقبلاً لتوفير المساحة'); }
+  if (navigator.storage?.persist) { const granted = await navigator.storage.persist(); if (granted === false) showToast('⚠️ قد يحذف المتصفح البيانات مستقبلاً لتوفير المساحة'); }
   navigator.permissions?.query({ name: 'microphone' }).then(s => { const sub = document.getElementById('sysSubtitle'); if (s.state === 'denied' && sub) { sub.textContent = '⚠️ الميكروفون محظور من إعدادات المتصفح'; sub.classList.add('warn'); } s.onchange = () => location.reload(); }).catch(()=>{});
-  document.addEventListener('visibilitychange', () => { if (document.hidden && App.state === 'recording') showToast('🎙 يتم التسجيل في الخلفية'); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && (App.state === 'recording' || App.state === 'paused')) showToast('🎙 الميكروفون لا يزال نشطاً في الخلفية'); });
   window.addEventListener('beforeunload', () => { revokeCurrentUrl(); revokePlayingUrl(); App.currentBlob = null; if (App.audioCtx) App.audioCtx.close(); });
 
   try { db = await openDB(); const all = await dbGetAll(); App.recordings = all.map(r => ({ id: r.id, name: r.name, duration: r.duration, date: r.date })); if (App.recordings.length > 0) App.everRecorded = true; renderList(); updateStorage(); } catch(e) { showToast('⚠️ خطأ في تهيئة قاعدة البيانات'); }
