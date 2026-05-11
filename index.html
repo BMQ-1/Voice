@@ -1,0 +1,820 @@
+<!-- START OF FILE -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; media-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests;">
+<title>مسجّل الصوت الاحترافي</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #000; --surface: #111; --surface2: #1c1c1e; --surface3: #2c2c2e;
+  --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.13);
+  --text: #f5f5f7; --text2: #98989f; --text3: #636366;
+  --accent: #ff3b30; --accent-glow: rgba(255,59,48,0.22);
+  --blue: #0a84ff; --blue-glow: rgba(10,132,255,0.2);
+  --green: #30d158; --yellow: #ffd60a; --orange: #ff9f0a;
+}
+
+html, body { overscroll-behavior-y: none; }
+
+body {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; padding: 20px 16px 60px;
+  user-select: none; -webkit-user-select: none;
+}
+
+/* Animations & Accessibility */
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.slide-in { animation: slideIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media (max-width: 480px) {
+  .hidden-mobile { display: none !important; }
+}
+
+/* Header */
+.header { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; padding: 4px 0 22px; }
+.header h1 { font-size: 21px; font-weight: 600; letter-spacing: -0.3px; }
+.header .subtitle { font-size: 11px; color: var(--text3); margin-top: 2px; transition: color 0.3s; }
+.header .subtitle.warn { color: var(--orange); }
+.lock-badge { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 11px; font-size: 11px; color: var(--green); white-space: nowrap; }
+.lock-badge svg { width: 10px; height: 10px; fill: var(--green); flex-shrink: 0; }
+
+/* Visualizer Card */
+.visualizer-card { width: 100%; max-width: 480px; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 24px 22px 20px; margin-bottom: 14px; position: relative; overflow: hidden; }
+.visualizer-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,59,48,0.05), transparent); pointer-events: none; }
+.timer-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+.timer { font-size: 40px; font-weight: 300; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; line-height: 1; transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: left center; }
+.timer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.rec-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); opacity: 0; box-shadow: 0 0 8px var(--accent-glow); }
+.rec-dot.active { animation: blink 1s ease-in-out infinite; opacity: 1; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+.mic-live-badge { font-size: 9px; color: var(--orange); background: rgba(255,159,10,0.12); border: 1px solid rgba(255,159,10,0.25); border-radius: 10px; padding: 2px 7px; display: none; }
+.mic-live-badge.visible { display: block; }
+
+/* Waveform */
+.waveform-wrap { width: 100%; height: 64px; display: flex; align-items: center; justify-content: center; gap: 2.5px; margin-bottom: 16px; overflow: hidden; }
+.bar { width: 3px; border-radius: 3px; background: var(--text3); height: 5px; flex-shrink: 0; transition: background 0.3s; }
+.bar.active { background: var(--accent); }
+.bar.played { background: var(--text2); }
+
+/* Storage & Max Dur Bar */
+.max-dur-bar { width: 100%; height: 2px; background: var(--surface3); border-radius: 2px; margin-bottom: 12px; overflow: hidden; display: none; }
+.max-dur-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.5s linear; }
+.max-dur-bar.visible { display: block; }
+.storage-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.storage-label { font-size: 11px; color: var(--text3); }
+.storage-bar { flex: 1; height: 3px; background: var(--surface3); border-radius: 3px; margin: 0 10px; overflow: hidden; }
+.storage-fill { height: 100%; background: var(--blue); border-radius: 3px; width: 0%; transition: width 0.4s; }
+.storage-fill.warn { background: var(--orange); }
+.storage-fill.crit { background: var(--accent); }
+.storage-pct { font-size: 11px; color: var(--text3); font-variant-numeric: tabular-nums; text-align: left; }
+.status-text { text-align: center; font-size: 12px; color: var(--text3); letter-spacing: 0.1px; }
+
+/* Search & Controls */
+.search-wrap { width: 100%; max-width: 480px; position: relative; margin-bottom: 14px; }
+.search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px 38px 11px 16px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; user-select: text; -webkit-user-select: text; }
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { border-color: var(--blue); }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: var(--text3); pointer-events: none; }
+
+.controls { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.main-btn { width: 100%; height: 66px; border-radius: 18px; border: none; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 9px; transition: transform 0.1s ease, filter 0.1s ease; -webkit-tap-highlight-color: transparent; letter-spacing: -0.1px; }
+.main-btn:active { transform: scale(0.97); filter: brightness(0.88); }
+.main-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-record { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
+.btn-stop   { background: var(--surface3); color: var(--text); }
+.btn-pause  { background: var(--surface3); color: var(--yellow); }
+.btn-resume { background: var(--surface3); color: var(--green); }
+.row-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; width: 100%; }
+.row-btns .main-btn { height: 54px; font-size: 13px; border-radius: 14px; }
+.btn-play    { background: var(--surface2); color: var(--blue); border: 1px solid var(--border); }
+.btn-save    { background: var(--blue); color: #fff; box-shadow: 0 3px 14px var(--blue-glow); }
+.btn-discard { background: var(--surface2); color: var(--accent); border: 1px solid var(--border); }
+.btn-new     { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+.speed-row { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 16px; }
+.speed-label { font-size: 12px; color: var(--text3); margin-left: auto; }
+.speed-btn { background: var(--surface3); border: none; color: var(--text2); font-family: inherit; font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: 8px; cursor: pointer; transition: background 0.12s, color 0.12s; -webkit-tap-highlight-color: transparent; }
+.speed-btn.active { background: var(--blue); color: #fff; }
+.ico { width: 19px; height: 19px; flex-shrink: 0; }
+.ico-sm { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* List Section & Items */
+.list-section { width: 100%; max-width: 480px; }
+.list-header { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 8px; padding: 0 4px; display: flex; justify-content: space-between; align-items: center; }
+.list-header-left, .list-header-right { display: flex; align-items: center; gap: 6px; }
+.sort-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-size: 11px; padding: 4px 8px; border-radius: 8px; font-family: inherit; outline: none; cursor: pointer; transition: border-color 0.15s; }
+.list-actions-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; padding: 0 4px; flex-wrap: wrap; }
+.action-link-btn { background: none; border: none; font-family: inherit; font-size: 11px; color: var(--blue); cursor: pointer; padding: 2px 4px; border-radius: 4px; transition: opacity 0.12s; }
+.action-link-btn:hover { opacity: 0.8; }
+.divider { color: var(--text3); font-size: 11px; }
+
+.recordings-list { display: flex; flex-direction: column; gap: 7px; overflow-x: hidden; }
+.rec-wrapper { position: relative; border-radius: 14px; overflow: hidden; background: var(--accent); }
+.rec-delete-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; color: #fff; font-size: 13px; font-weight: 500; z-index: 1; pointer-events: none; }
+.rec-delete-bg svg { width: 18px; height: 18px; fill: currentColor; margin-left: 6px; }
+
+.rec-item {
+  position: relative; z-index: 2; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; transition: background 0.12s, border-color 0.12s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); touch-action: pan-y;
+}
+.rec-item.playing { border-color: rgba(10,132,255,0.35); }
+.rec-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--surface3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rec-icon svg { width: 17px; height: 17px; }
+.rec-info { flex: 1; min-width: 0; pointer-events: none; }
+.rec-name { font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; pointer-events: auto; }
+.rec-name-input { font-family: inherit; font-size: 13px; font-weight: 500; background: var(--surface3); border: 1px solid var(--blue); border-radius: 6px; color: var(--text); padding: 2px 7px; width: 100%; outline: none; user-select: text; -webkit-user-select: text; pointer-events: auto; }
+.rec-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.mini-progress { width: 100%; height: 2px; background: var(--surface3); border-radius: 2px; margin-top: 5px; overflow: hidden; display: none; }
+.mini-progress-fill { height: 100%; background: var(--blue); border-radius: 2px; width: 0%; }
+.rec-item.playing .mini-progress { display: block; }
+.rec-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.icon-btn { width: 30px; height: 30px; border-radius: 9px; background: var(--surface3); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); transition: background 0.12s; -webkit-tap-highlight-color: transparent; }
+.icon-btn.danger { color: var(--accent); }
+.icon-btn.primary { color: var(--blue); }
+
+/* Privacy & UI Components */
+.privacy-note { width: 100%; max-width: 480px; margin-top: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; gap: 9px; align-items: flex-start; }
+.privacy-note svg { width: 16px; height: 16px; fill: var(--green); flex-shrink: 0; margin-top: 1px; }
+.privacy-note p { font-size: 11px; color: var(--text3); line-height: 1.6; }
+.empty-state { text-align: center; padding: 28px 0; color: var(--text3); font-size: 12px; line-height: 1.6; }
+.empty-state svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.25; display: block; margin-left: auto; margin-right: auto; }
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(70px); background: var(--surface3); border: 1px solid var(--border2); color: var(--text); font-size: 13px; font-family: inherit; padding: 9px 18px; border-radius: 20px; transition: transform 0.28s cubic-bezier(.34,1.56,.64,1), opacity 0.28s; opacity: 0; white-space: nowrap; pointer-events: none; z-index: 999; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.kbd-hint { width: 100%; max-width: 480px; text-align: center; font-size: 11px; color: var(--text3); margin-top: 16px; }
+.kbd-hint kbd { background: var(--surface2); border: 1px solid var(--border2); border-radius: 5px; padding: 1px 6px; font-family: inherit; font-size: 10px; color: var(--text2); }
+
+/* Custom Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; }
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px; width: 90%; max-width: 320px; text-align: center; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.modal-overlay.active .modal-box { transform: scale(1); }
+.modal-title { font-size: 17px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.modal-desc { font-size: 13px; color: var(--text3); margin-bottom: 20px; line-height: 1.5; }
+.modal-input { margin-bottom: 20px; width: 100%; text-align: center; font-size: 15px; }
+.modal-input:disabled { display: none; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>مسجّل الصوت</h1>
+    <div class="subtitle" id="sysSubtitle">خاص • آمن • محلي بالكامل</div>
+  </div>
+  <div class="lock-badge">
+    <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+    رملي معزول
+  </div>
+</div>
+
+<div class="visualizer-card">
+  <div class="timer-row">
+    <div class="timer" id="timer">00:00</div>
+    <div class="timer-right">
+      <div class="rec-dot" id="recDot"></div>
+      <div class="mic-live-badge" id="micLiveBadge">🎙 الميكروفون نشط</div>
+    </div>
+  </div>
+  <div class="waveform-wrap" id="waveform"></div>
+  <div class="max-dur-bar" id="maxDurBar"><div class="max-dur-fill" id="maxDurFill"></div></div>
+  <div class="storage-row">
+    <div class="storage-label">التخزين</div>
+    <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
+    <div class="storage-pct" id="storagePct">…</div>
+  </div>
+  <div class="status-text" id="statusText">اضغط للتسجيل • Space للتحكم</div>
+</div>
+
+<div class="controls">
+  <button class="main-btn btn-record fade-in" id="btnRecord" aria-label="بدء التسجيل">
+    <svg class="ico" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+    بدء التسجيل
+  </button>
+
+  <div id="recControls" class="hidden fade-in">
+    <div class="row-btns">
+      <button class="main-btn btn-pause" id="btnPause" aria-label="إيقاف مؤقت">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        إيقاف مؤقت
+      </button>
+      <button class="main-btn btn-stop" id="btnStop" aria-label="إنهاء">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+        إنهاء
+      </button>
+    </div>
+  </div>
+
+  <div id="pausedControls" class="hidden fade-in">
+    <div class="row-btns">
+      <button class="main-btn btn-resume" id="btnResume" aria-label="استئناف">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        استئناف
+      </button>
+      <button class="main-btn btn-stop" id="btnStopPaused" aria-label="إنهاء">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+        إنهاء
+      </button>
+    </div>
+  </div>
+
+  <div id="doneControls" class="hidden fade-in">
+    <div class="row-btns" style="margin-bottom:9px">
+      <button class="main-btn btn-play" id="btnPlayCurrent" aria-label="معاينة">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        معاينة
+      </button>
+      <button class="main-btn btn-save" id="btnSave" aria-label="حفظ">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zm7-18L5.33 13h4.17v4h5v-4h4.17L12 2z"/></svg>
+        حفظ
+      </button>
+    </div>
+    <div class="row-btns">
+      <button class="main-btn btn-discard" id="btnDiscard" aria-label="حذف">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        حذف
+      </button>
+      <button class="main-btn btn-new" id="btnNew" aria-label="تسجيل جديد">
+        <svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        جديد
+      </button>
+    </div>
+  </div>
+
+  <div class="speed-row hidden fade-in" id="speedRow">
+    <span class="speed-label">التحكم:</span>
+    <button class="speed-btn" id="loopBtn" aria-label="تكرار">🔁 تكرار: إيقاف</button>
+    <div style="width: 1px; height: 16px; background: var(--border2); margin: 0 4px;"></div>
+    <button class="speed-btn" id="spd05" data-spd="0.5">0.5×</button>
+    <button class="speed-btn active" id="spd1" data-spd="1">1×</button>
+    <button class="speed-btn" id="spd15" data-spd="1.5">1.5×</button>
+    <button class="speed-btn" id="spd2" data-spd="2">2×</button>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <input class="search-input" id="searchInput" type="search" placeholder="ابحث في التسجيلات…" aria-label="بحث">
+  <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+</div>
+
+<div class="list-section">
+  <div class="list-header">
+    <div class="list-header-left">
+      <span>التسجيلات</span>
+      <span id="listCount" aria-live="polite" style="font-size:11px;color:var(--text3)"></span>
+    </div>
+    <div class="list-header-right">
+      <select id="sortSelect" class="sort-select" aria-label="ترتيب التسجيلات">
+        <option value="date-desc">الأحدث أولاً</option>
+        <option value="date-asc">الأقدم أولاً</option>
+        <option value="dur-desc">الأطول مدة</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="list-actions-row">
+    <button id="btnExportAll" class="action-link-btn">📥 تحميل الكل</button>
+    <span class="divider">•</span>
+    <button id="btnBackupExport" class="action-link-btn">💾 تصدير نسخة احتياطية</button>
+    <span class="divider">•</span>
+    <button id="btnBackupImport" class="action-link-btn">📂 استيراد نسخة</button>
+    <input type="file" id="backupFileInput" accept=".json,application/json" class="hidden">
+  </div>
+
+  <div class="recordings-list" id="recordingsList"></div>
+</div>
+
+<div class="privacy-note">
+  <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+  <p><strong>خصوصيتك محمية تماماً.</strong> يتم حفظ التسجيلات محلياً ضمن مساحة التخزين الخاصة بمتصفحك. وعند التصدير تتوفر أدوات تشفير قوية لضمان الأمان الكامل لبياناتك.</p>
+</div>
+
+<div class="kbd-hint">
+  <kbd>Space</kbd> تسجيل/إيقاف مؤقت &nbsp;•&nbsp; <kbd>Esc</kbd> إنهاء &nbsp;•&nbsp; <kbd>S</kbd> حفظ
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Custom UI Modal -->
+<div id="uiModal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 class="modal-title" id="modalTitle"></h3>
+    <p class="modal-desc" id="modalDesc"></p>
+    <input type="password" id="modalInput" class="search-input modal-input" placeholder="كلمة المرور...">
+    <div class="row-btns">
+      <button class="main-btn btn-new" id="modalCancelBtn">إلغاء</button>
+      <button class="main-btn btn-save" id="modalConfirmBtn">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── State Object ──
+const App = {
+  mediaRecorder: null, audioChunks: [], currentBlob: null, currentObjectUrl: null,
+  currentAudioEl: null, timerInterval: null, seconds: 0, state: 'idle', everRecorded: false,
+  recordings: [], activePlayingId: null, playingAudio: null, playingObjectUrl: null,
+  animFrameId: null, analyser: null, dataArray: null, audioCtx: null, playbackSpeed: 1,
+  MAX_DURATION: 3600, stopping: false, loopPlayback: false, modalActive: false
+};
+
+// ── Custom Modal System ──
+function showModal(opts) {
+  return new Promise(resolve => {
+    App.modalActive = true;
+    const overlay = document.getElementById('uiModal');
+    const title = document.getElementById('modalTitle');
+    const desc = document.getElementById('modalDesc');
+    const input = document.getElementById('modalInput');
+    const btnCancel = document.getElementById('modalCancelBtn');
+    const btnConfirm = document.getElementById('modalConfirmBtn');
+
+    title.textContent = opts.title || '';
+    desc.textContent = opts.desc || '';
+    
+    input.value = '';
+    input.disabled = opts.type !== 'password';
+    
+    btnCancel.textContent = opts.cancelText || 'إلغاء';
+    btnConfirm.textContent = opts.confirmText || 'تأكيد';
+    btnConfirm.className = `main-btn ${opts.danger ? 'btn-discard' : 'btn-save'}`;
+
+    overlay.classList.add('active');
+    if (opts.type === 'password') setTimeout(() => input.focus(), 100);
+
+    const cleanup = () => {
+      overlay.classList.remove('active');
+      App.modalActive = false;
+      btnCancel.onclick = null; btnConfirm.onclick = null; overlay.onclick = null;
+      document.removeEventListener('keydown', keyHandler);
+    };
+
+    const handleConfirm = () => { cleanup(); resolve(opts.type === 'password' ? input.value : true); };
+    const handleCancel = () => { cleanup(); resolve(null); };
+    const keyHandler = (e) => {
+      if (!App.modalActive) return;
+      if (e.key === 'Enter') { e.preventDefault(); handleConfirm(); }
+      if (e.key === 'Escape') { e.preventDefault(); handleCancel(); }
+    };
+
+    btnConfirm.onclick = handleConfirm;
+    btnCancel.onclick = handleCancel;
+    overlay.onclick = (e) => { if (e.target === overlay) handleCancel(); };
+    document.addEventListener('keydown', keyHandler);
+  });
+}
+
+// ── State UI Update ──
+const STATE_VIEWS = { idle: ['btnRecord'], recording: ['recControls'], paused: ['pausedControls'], done: ['doneControls'] };
+
+function setState(s) {
+  App.state = s;
+  Object.keys(STATE_VIEWS).forEach(k => STATE_VIEWS[k].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.toggle('hidden', k !== s);
+  }));
+  
+  const dot = document.getElementById('recDot');
+  const status = document.getElementById('statusText');
+  const badge = document.getElementById('micLiveBadge');
+  const maxBar = document.getElementById('maxDurBar');
+  
+  if (dot) dot.classList.toggle('active', s === 'recording');
+  if (badge) badge.classList.toggle('visible', s === 'recording' || s === 'paused');
+  if (maxBar) maxBar.classList.toggle('visible', s === 'recording' || s === 'paused');
+  
+  const msgs = {
+    idle: 'اضغط للتسجيل • Space للتحكم', recording: 'جارٍ التسجيل…',
+    paused: 'متوقف مؤقتاً — الميكروفون لا يزال نشطاً', done: 'انتهى التسجيل — ' + fmt(App.seconds)
+  };
+  if (status) status.textContent = msgs[s] || '';
+  
+  if (s === 'idle') {
+    bars.forEach(b => b.classList.remove('active','played'));
+    if (!idleAnimId) animateIdle();
+  } else {
+    cancelAnimationFrame(idleAnimId);
+    idleAnimId = null;
+    bars.forEach(b => {
+      b.classList.toggle('active', s === 'recording');
+      b.classList.toggle('played', s === 'done');
+    });
+  }
+}
+
+// ── IndexedDB Configuration ──
+const DB_NAME = 'VoiceRecorder', DB_VER = 1, STORE = 'recordings';
+let db = null;
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => { e.target.result.createObjectStore(STORE, { keyPath: 'id' }); };
+    req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e.target.error);
+  });
+}
+async function ensureDB() { if (!db) db = await openDB(); return db; }
+function dbTx(mode) { return db.transaction(STORE, mode).objectStore(STORE); }
+function dbOp(req) { return new Promise((res, rej) => { req.onsuccess = e => res(e.target.result); req.onerror = e => rej(e.target.error); }); }
+async function dbPut(rec) { await ensureDB(); return dbOp(dbTx('readwrite').put(rec)); }
+async function dbDelete(id) { await ensureDB(); return dbOp(dbTx('readwrite').delete(id)); }
+async function dbGet(id) { await ensureDB(); return dbOp(dbTx('readonly').get(id)); }
+async function dbGetAll() { await ensureDB(); return dbOp(dbTx('readonly').getAll()); }
+
+// ── WebCrypto Functions (Secure Backup) ──
+const LEGACY_SALT = new TextEncoder().encode('VoiceRec_Enc_Salt_v1'); // V1/V2 fallback
+async function getCryptoKey(password, saltUint8) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: saltUint8, iterations: 100000, hash: "SHA-256" },
+    keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+  );
+}
+async function encryptPayload(base64Str, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, new TextEncoder().encode(base64Str));
+  const combined = new Uint8Array(12 + cipher.byteLength);
+  combined.set(iv, 0); combined.set(new Uint8Array(cipher), 12);
+  return uint8ArrayToBase64(combined);
+}
+async function decryptPayload(encBase64, key) {
+  const combined = base64ToUint8Array(encBase64);
+  const iv = combined.subarray(0, 12); const cipher = combined.subarray(12);
+  const decrypted = await crypto.subtle.decrypt({name: "AES-GCM", iv}, key, cipher);
+  return new TextDecoder().decode(decrypted);
+}
+function uint8ArrayToBase64(arr) {
+  let bin = ''; const chunkSize = 8192;
+  for (let i = 0; i < arr.length; i += chunkSize) bin += String.fromCharCode.apply(null, arr.subarray(i, Math.min(i + chunkSize, arr.length)));
+  return window.btoa(bin);
+}
+function base64ToUint8Array(base64) {
+  const bin = window.atob(base64); const len = bin.length; const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+// ── Haptic Vibration ──
+function vibrate(pattern = 50) { if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch(_) {} } }
+
+// ── Waveform bars & Ambient Idle ──
+const waveformEl = document.getElementById('waveform');
+const BAR_COUNT = 54; const bars = [];
+for (let i = 0; i < BAR_COUNT; i++) {
+  const b = document.createElement('div'); b.className = 'bar';
+  waveformEl.appendChild(b); bars.push(b);
+}
+let idleT = 0, idleAnimId = null;
+function animateIdle() {
+  if (App.state !== 'idle') return;
+  idleT += 0.04;
+  bars.forEach((b, i) => { b.style.height = (4 + Math.abs(Math.sin(i * 0.48 + idleT)) * 8) + 'px'; });
+  idleAnimId = requestAnimationFrame(animateIdle);
+}
+
+function animateViz() {
+  App.animFrameId = requestAnimationFrame(animateViz);
+  if (!App.analyser) return;
+  App.analyser.getByteFrequencyData(App.dataArray);
+  bars.forEach((b, i) => {
+    const v = App.dataArray[Math.floor(i * App.dataArray.length / BAR_COUNT)] || 0;
+    b.style.height = Math.max(4, v * 0.42) + 'px';
+  });
+}
+function stopViz() { cancelAnimationFrame(App.animFrameId); App.animFrameId = null; }
+
+// ── Timer ──
+function startTimer() {
+  App.timerInterval = setInterval(() => {
+    App.seconds++;
+    const timerEl = document.getElementById('timer');
+    if (timerEl) {
+      timerEl.textContent = fmt(App.seconds);
+      timerEl.style.transform = 'scale(1.05)';
+      setTimeout(() => timerEl.style.transform = 'scale(1)', 150); // Pulse effect
+    }
+    const fillEl = document.getElementById('maxDurFill');
+    if (fillEl) fillEl.style.width = Math.min((App.seconds / App.MAX_DURATION) * 100, 100) + '%';
+    if (App.seconds >= App.MAX_DURATION) stopRecording();
+  }, 1000);
+}
+function stopTimer() { clearInterval(App.timerInterval); App.timerInterval = null; }
+function fmt(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60; return h > 0 ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`; }
+function pad(n) { return String(n).padStart(2,'0'); }
+
+// ── Get Supported Mime-Type ──
+function getSupportedMimeType() {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/wav', 'audio/aac'];
+  for (const t of types) { if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; }
+  return 'audio/webm';
+}
+function getExtFromMime(mime) {
+  if (mime.includes('mp4') || mime.includes('aac')) return 'm4a';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
+  return 'webm';
+}
+
+// ── Recording Control ──
+async function startRecording() {
+  let stream = null; vibrate(60); App.everRecorded = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    App.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = App.audioCtx.createMediaStreamSource(stream);
+    App.analyser = App.audioCtx.createAnalyser(); App.analyser.fftSize = 128;
+    src.connect(App.analyser); App.dataArray = new Uint8Array(App.analyser.frequencyBinCount);
+    const mime = getSupportedMimeType();
+    App.mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+    App.audioChunks = [];
+    App.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) App.audioChunks.push(e.data); };
+    App.mediaRecorder.onstop = onRecordingStop;
+    App.stopping = false; App.mediaRecorder.start(100); App.seconds = 0;
+    document.getElementById('timer').textContent = '00:00'; document.getElementById('maxDurFill').style.width = '0%';
+    startTimer(); setState('recording'); animateViz();
+  } catch(e) {
+    if (App.audioCtx) { App.audioCtx.close(); App.audioCtx = null; }
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    showToast('⚠️ تعذّر الوصول للميكروفون');
+  }
+}
+function pauseRecording() { vibrate(40); if (App.mediaRecorder?.state === 'recording') App.mediaRecorder.pause(); stopTimer(); stopViz(); setState('paused'); }
+function resumeRecording() { vibrate(40); if (App.mediaRecorder?.state === 'paused') App.mediaRecorder.resume(); startTimer(); animateViz(); setState('recording'); }
+function stopRecording() {
+  vibrate([40, 40]); stopTimer(); stopViz();
+  if (App.mediaRecorder && App.mediaRecorder.state !== 'inactive') {
+    App.stopping = true; App.mediaRecorder.stop(); App.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+  if (App.audioCtx) { App.audioCtx.close(); App.audioCtx = null; }
+  App.analyser = null;
+}
+function onRecordingStop() {
+  if (!App.stopping) return;
+  App.stopping = false;
+  const mime = App.mediaRecorder?.mimeType || getSupportedMimeType();
+  App.currentBlob = new Blob(App.audioChunks, { type: mime });
+  App.audioChunks = []; // Free memory
+  setState('done');
+}
+
+// ── Preview Control ──
+function revokeCurrentUrl() { if (App.currentObjectUrl) { URL.revokeObjectURL(App.currentObjectUrl); App.currentObjectUrl = null; } }
+function playCurrentBlob() {
+  if (!App.currentBlob) return;
+  if (App.currentAudioEl && !App.currentAudioEl.paused) { App.currentAudioEl.pause(); revokeCurrentUrl(); setBtnPlayCurrent(false); return; }
+  revokeCurrentUrl(); App.currentObjectUrl = URL.createObjectURL(App.currentBlob);
+  App.currentAudioEl = new Audio(App.currentObjectUrl); App.currentAudioEl.play(); setBtnPlayCurrent(true);
+  App.currentAudioEl.onended = () => { revokeCurrentUrl(); setBtnPlayCurrent(false); };
+  App.currentAudioEl.onerror = () => { revokeCurrentUrl(); setBtnPlayCurrent(false); showToast('خطأ في التشغيل'); };
+}
+function setBtnPlayCurrent(playing) {
+  const btn = document.getElementById('btnPlayCurrent');
+  if (btn) btn.innerHTML = playing ? `<svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> إيقاف` : `<svg class="ico-sm" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> معاينة`;
+}
+
+// ── Save & Discard ──
+async function saveRecording() {
+  if (!App.currentBlob) return; vibrate(50);
+  if (navigator.storage?.estimate) {
+    const { usage, quota } = await navigator.storage.estimate();
+    if (quota && isFinite(quota) && (quota - usage) < App.currentBlob.size * 2) { showToast('⚠️ مساحة التخزين منخفضة جداً'); return; }
+  }
+  let maxNum = 0; App.recordings.forEach(r => { const m = r.name.match(/^تسجيل (\d+)$/); if (m) { const val = parseInt(m[1], 10); if (val > maxNum) maxNum = val; } });
+  const rec = { id: Date.now(), name: 'تسجيل ' + (maxNum + 1), duration: App.seconds, date: new Date().toLocaleDateString('ar-SA'), blob: App.currentBlob };
+  try { await dbPut(rec); App.recordings.unshift({ id: rec.id, name: rec.name, duration: rec.duration, date: rec.date }); renderList(); updateStorage(); showToast('✓ تم الحفظ'); resetToIdle(); } catch(e) { showToast('⚠️ فشل الحفظ'); }
+}
+async function discardCurrent() { 
+  const confirm = await showModal({ title: 'تأكيد الحذف', desc: 'هل أنت متأكد من رغبتك في حذف هذا التسجيل المؤقت؟', danger: true, confirmText: 'حذف' });
+  if (confirm) { vibrate(50); revokeCurrentUrl(); App.currentBlob = null; showToast('تم الحذف'); resetToIdle(); }
+}
+
+// ── Download & Export ──
+async function downloadRec(id) {
+  try {
+    const rec = await dbGet(id); if (!rec) return;
+    const url = URL.createObjectURL(rec.blob); const a = document.createElement('a');
+    a.href = url; a.download = rec.name + '.' + getExtFromMime(rec.blob.type); a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000); showToast('جارٍ التحميل…');
+  } catch(e) { showToast('⚠️ فشل التحميل'); }
+}
+async function exportAllRecordings() {
+  if (App.recordings.length === 0) { showToast('لا توجد تسجيلات لتصديرها'); return; }
+  showToast('⚠️ بعض المتصفحات قد تحظر التحميل المتعدد.');
+  await new Promise(r => setTimeout(r, 2000));
+  for (const rec of App.recordings) { await downloadRec(rec.id); await new Promise(r => setTimeout(r, 600)); }
+  showToast('✓ اكتمل التحميل المتسلسل');
+}
+
+// ── Backup System ──
+function blobToBase64(blob) { return new Promise((res, rej) => { const reader = new FileReader(); reader.onloadend = () => res(reader.result.substring(reader.result.indexOf(',') + 1)); reader.onerror = rej; reader.readAsDataURL(blob); }); }
+async function exportBackup() {
+  try {
+    const all = await dbGetAll(); if (all.length === 0) { showToast('لا توجد تسجيلات لتصديرها'); return; }
+    let key = null, saltB64 = null;
+    const pwd = await showModal({ type: 'password', title: 'تأمين النسخة الاحتياطية', desc: 'يمكنك إدخال كلمة مرور لتشفير ملفاتك، أو اترك الحقل فارغاً للحفظ بدون تشفير.', confirmText: 'إنشاء النسخة' });
+    if (pwd === null) return;
+    if (pwd.trim() !== "") {
+      showToast('جاري التشفير وإعداد النسخة…');
+      const salt = crypto.getRandomValues(new Uint8Array(16)); saltB64 = uint8ArrayToBase64(salt); key = await getCryptoKey(pwd, salt);
+    } else showToast('جاري تحضير ملف النسخ الاحتياطي…');
+    const serialized = await Promise.all(all.map(async r => {
+      let payload = await blobToBase64(r.blob); if (key) payload = await encryptPayload(payload, key);
+      return { id: r.id, name: r.name, duration: r.duration, date: r.date, mimeType: r.blob.type, payload: payload, encrypted: !!key };
+    }));
+    const backupObj = { app: 'LocalVoiceRecorderBackup', version: 4, timestamp: Date.now(), salt: saltB64, data: serialized };
+    const blob = new Blob([JSON.stringify(backupObj)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `نسخة_محمية_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000); showToast('✓ تم تحميل النسخة الاحتياطية بنجاح');
+  } catch(e) { showToast('⚠️ فشل التصدير الاحتياطي'); }
+}
+async function importBackup(e) {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    showToast('جاري فحص الملف الاحتياطي…'); const text = await file.text(); const parsed = JSON.parse(text);
+    if (parsed.app !== 'LocalVoiceRecorderBackup' || !Array.isArray(parsed.data)) throw new Error('الملف غير متطابق');
+    let key = null;
+    if (parsed.data.some(d => d.encrypted)) {
+      const pwd = await showModal({ type: 'password', title: 'فك التشفير', desc: 'النسخة محمية بكلمة مرور. الرجاء إدخالها للاستعادة.', confirmText: 'استعادة' });
+      if (!pwd || pwd.trim() === '') { e.target.value = ''; return; }
+      const salt = parsed.salt ? base64ToUint8Array(parsed.salt) : LEGACY_SALT;
+      key = await getCryptoKey(pwd, salt);
+    }
+    let importCount = 0;
+    for (const item of parsed.data) {
+      let base64 = item.payload;
+      if (item.encrypted) { try { base64 = await decryptPayload(base64, key); } catch (err) { throw new Error('كلمة المرور غير صحيحة'); } }
+      const blob = new Blob([base64ToUint8Array(base64)], { type: item.mimeType || 'audio/webm' });
+      const newId = Date.now() * 1000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 1000);
+      await dbPut({ id: newId, name: item.name || `مستورد ${importCount + 1}`, duration: item.duration || 0, date: item.date || new Date().toLocaleDateString('ar-SA'), blob: blob }); importCount++;
+    }
+    const all = await dbGetAll(); App.recordings = all.map(r => ({ id: r.id, name: r.name, duration: r.duration, date: r.date })); renderList(); updateStorage(); showToast(`✓ تم استيراد ${importCount} تسجيل بنجاح`);
+  } catch (err) { showToast('⚠️ ' + (err.message || 'تالف')); } finally { e.target.value = ''; }
+}
+
+// ── Delete Recording ──
+async function deleteRec(id) {
+  const confirm = await showModal({ title: 'تأكيد الحذف', desc: 'هل أنت متأكد؟ لا يمكن التراجع.', danger: true, confirmText: 'حذف' });
+  if (confirm) { vibrate(50); if (App.activePlayingId === id) stopPlayback(id); try { await dbDelete(id); App.recordings = App.recordings.filter(r => r.id !== id); renderList(); updateStorage(); showToast('تم الحذف'); } catch(e) { showToast('⚠️ فشل الحذف'); } }
+}
+
+// ── Rename ──
+function startRename(id) {
+  const nameEl = document.getElementById('rn_' + id); if (!nameEl) return;
+  const rec = App.recordings.find(r => r.id === id); if (!rec) return; const originalName = rec.name;
+  const input = document.createElement('input'); input.className = 'rec-name-input'; input.value = originalName; nameEl.replaceWith(input); input.focus(); input.select();
+  let committed = false;
+  async function commit() {
+    if (committed) return; committed = true; const newName = input.value.trim();
+    if (!newName || newName === originalName) { renderList(); return; } rec.name = newName;
+    try { const full = await dbGet(id); if (full) { full.name = newName; await dbPut(full); showToast('✓ تم تعديل الاسم'); } else throw new Error('Not found'); } catch(e) { rec.name = originalName; showToast('⚠️ فشل حفظ الاسم'); } renderList();
+  }
+  input.onblur = commit; input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { e.preventDefault(); committed = true; renderList(); } };
+}
+
+// ── Playback ──
+function revokePlayingUrl() { if (App.playingObjectUrl) { URL.revokeObjectURL(App.playingObjectUrl); App.playingObjectUrl = null; } }
+async function togglePlayRec(id) {
+  if (App.activePlayingId === id) { stopPlayback(id); return; }
+  if (App.activePlayingId) stopPlayback(App.activePlayingId);
+  try {
+    const rec = await dbGet(id); if (!rec) return; revokePlayingUrl(); App.playingObjectUrl = URL.createObjectURL(rec.blob);
+    App.playingAudio = new Audio(App.playingObjectUrl); App.playingAudio.playbackRate = App.playbackSpeed; App.playingAudio.loop = App.loopPlayback; App.activePlayingId = id; App.playingAudio.play();
+    document.getElementById('ri_' + id)?.classList.add('playing'); document.getElementById('speedRow')?.classList.remove('hidden'); updatePlayBtn(id, true);
+    App.playingAudio.ontimeupdate = () => { const fill = document.getElementById('fill_' + id); if (fill) fill.style.width = ((App.playingAudio.currentTime / App.playingAudio.duration) * 100 || 0) + '%'; };
+    App.playingAudio.onended = () => stopPlayback(id); App.playingAudio.onerror = () => { showToast('خطأ في التشغيل'); stopPlayback(id); };
+  } catch(e) { showToast('⚠️ فشل التشغيل'); }
+}
+function stopPlayback(id) {
+  if (App.playingAudio) { App.playingAudio.loop = false; App.playingAudio.pause(); App.playingAudio = null; } revokePlayingUrl(); App.activePlayingId = null;
+  document.getElementById('ri_' + id)?.classList.remove('playing'); document.getElementById('speedRow')?.classList.add('hidden'); updatePlayBtn(id, false);
+  const fill = document.getElementById('fill_' + id); if (fill) fill.style.width = '0%';
+}
+function updatePlayBtn(id, playing) { const btn = document.getElementById('pb_' + id); if (btn) btn.innerHTML = playing ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>` : `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`; btn?.setAttribute('aria-label', playing ? 'إيقاف' : 'تشغيل'); }
+function setSpeed(spd) { App.playbackSpeed = spd; if (App.playingAudio) App.playingAudio.playbackRate = spd; document.querySelectorAll('.speed-btn').forEach(b => { const rate = parseFloat(b.dataset.spd); if (!isNaN(rate)) b.classList.toggle('active', rate === spd); }); }
+function toggleLoop() { App.loopPlayback = !App.loopPlayback; if (App.playingAudio) App.playingAudio.loop = App.loopPlayback; const btn = document.getElementById('loopBtn'); if (btn) { btn.classList.toggle('active', App.loopPlayback); btn.textContent = App.loopPlayback ? '🔁 تكرار: نشط' : '🔁 تكرار: إيقاف'; } vibrate(30); }
+
+// ── Render list & Empty State ──
+function renderList() {
+  const list = document.getElementById('recordingsList'); if (!list) return;
+  const q = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  let sorted = [...App.recordings]; const sortVal = document.getElementById('sortSelect')?.value || 'date-desc';
+  if (sortVal === 'date-desc') sorted.sort((a,b) => b.id - a.id); else if (sortVal === 'date-asc') sorted.sort((a,b) => a.id - b.id); else if (sortVal === 'dur-desc') sorted.sort((a,b) => b.duration - a.duration);
+  const filtered = q ? sorted.filter(r => r.name.toLowerCase().includes(q)) : sorted;
+  const listCount = document.getElementById('listCount'); if (listCount) listCount.textContent = filtered.length ? filtered.length + ' تسجيل' : '';
+  
+  if (filtered.length === 0) {
+    let emptyMsg = 'اضغط على بدء التسجيل لبدء أول تسجيل لك 🎙';
+    if (q) emptyMsg = `لا توجد نتائج لـ "${escHtml(q)}"`; else if (App.everRecorded) emptyMsg = 'لا توجد تسجيلات — جاهز لبداية جديدة ✨';
+    list.innerHTML = `<div class="empty-state fade-in"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>${emptyMsg}</div>`;
+    return;
+  }
+  
+  list.innerHTML = filtered.map(rec => {
+    const isPlaying = (App.activePlayingId === rec.id);
+    const itemClass = isPlaying ? 'rec-item playing slide-in' : 'rec-item slide-in';
+    const iconPlay = isPlaying ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>` : `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+    return `<div class="rec-wrapper slide-in" id="rw_${rec.id}">
+      <div class="rec-delete-bg">حذف <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+      <div class="${itemClass}" id="ri_${rec.id}" data-id="${rec.id}">
+        <div class="rec-icon"><svg viewBox="0 0 24 24" fill="var(--text3)"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></div>
+        <div class="rec-info"><div class="rec-name" id="rn_${rec.id}">${escHtml(rec.name)}</div><div class="rec-meta">${fmt(rec.duration)} • ${rec.date}</div><div class="mini-progress"><div class="mini-progress-fill" id="fill_${rec.id}"></div></div></div>
+        <div class="rec-actions">
+          <button class="icon-btn primary" id="pb_${rec.id}" data-id="${rec.id}" data-action="play" aria-label="تشغيل">${iconPlay}</button>
+          <button class="icon-btn" data-id="${rec.id}" data-action="download" aria-label="تحميل"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zm7-18L5.33 13h4.17v4h5v-4h4.17L12 2z"/></svg></button>
+          <button class="icon-btn" data-id="${rec.id}" data-action="rename" aria-label="تسمية"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          <button class="icon-btn danger hidden-mobile" data-id="${rec.id}" data-action="delete" aria-label="حذف"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+function escHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Storage indicator ──
+function formatBytes(b) { if (b < 1024) return b + ' B'; if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB'; return (b/(1024*1024)).toFixed(1) + ' MB'; }
+async function updateStorage() {
+  if (!navigator.storage?.estimate) return;
+  try {
+    const { usage, quota } = await navigator.storage.estimate(); 
+    let pct = 0; if (quota && isFinite(quota)) pct = Math.min((usage / quota) * 100, 100);
+    const fill = document.getElementById('storageFill'); if (fill) { fill.style.width = pct + '%'; fill.className = 'storage-fill' + (pct > 85 ? ' crit' : pct > 60 ? ' warn' : ''); }
+    const pctEl = document.getElementById('storagePct'); if (pctEl) pctEl.textContent = `${pct.toFixed(1)}% · ${formatBytes(usage)}`;
+  } catch(_) {}
+}
+
+// ── Reset ──
+function resetToIdle() { App.seconds = 0; const timerEl = document.getElementById('timer'); if (timerEl) timerEl.textContent = '00:00'; const fillEl = document.getElementById('maxDurFill'); if (fillEl) fillEl.style.width = '0%'; revokeCurrentUrl(); App.currentBlob = null; if (App.currentAudioEl) { App.currentAudioEl.pause(); App.currentAudioEl = null; } setState('idle'); }
+
+// ── Toast ──
+let toastTimer; function showToast(msg) { const t = document.getElementById('toast'); if (!t) return; t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
+
+// ── Keyboard ──
+function handleKeydown(e) { if (App.modalActive || e.target.tagName === 'INPUT') return; if (e.code === 'Space') { e.preventDefault(); if (App.state === 'idle') startRecording(); else if (App.state === 'recording') pauseRecording(); else if (App.state === 'paused') resumeRecording(); } if (e.code === 'Escape') { if (App.state === 'recording' || App.state === 'paused') stopRecording(); else if (App.state === 'done') discardCurrent(); } if (e.key.toLowerCase() === 's' && App.state === 'done') saveRecording(); }
+
+// ── Gestures (Swipe & Long Press) ──
+let swipeStartX=0, swipeCurrentX=0, swipedItem=null, isPointerDown=false, longPressTimer=null;
+function initGestures() {
+  const listEl = document.getElementById('recordingsList'); if(!listEl) return;
+  listEl.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('[data-action]')) return;
+    const item = e.target.closest('.rec-item'); if(!item) return;
+    isPointerDown = true; swipeStartX = e.clientX; swipeCurrentX = e.clientX; swipedItem = item; item.style.transition = 'none';
+    const id = parseInt(item.dataset.id, 10);
+    longPressTimer = setTimeout(() => { if(isPointerDown && Math.abs(swipeCurrentX - swipeStartX) < 10) { startRename(id); vibrate(50); isPointerDown = false; } }, 600);
+  });
+  listEl.addEventListener('pointermove', e => {
+    if(!isPointerDown || !swipedItem) return;
+    swipeCurrentX = e.clientX; const diff = swipeCurrentX - swipeStartX;
+    if(Math.abs(diff) > 10) clearTimeout(longPressTimer);
+    if(diff < 0) swipedItem.style.transform = `translateX(${Math.max(diff, -100)}px)`; // swipe left
+  });
+  listEl.addEventListener('pointerup', handlePointerUp);
+  listEl.addEventListener('pointerleave', handlePointerUp);
+  function handlePointerUp() {
+    clearTimeout(longPressTimer);
+    if(isPointerDown && swipedItem) {
+      const diff = swipeCurrentX - swipeStartX; 
+      swipedItem.style.transition = 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      
+      const currentItem = swipedItem; const id = parseInt(currentItem.dataset.id, 10);
+      currentItem.style.transform = 'translateX(0)'; // Reset Immediately
+      isPointerDown = false; swipedItem = null;
+      
+      if(diff < -65) deleteRec(id);
+    } else { isPointerDown = false; swipedItem = null; }
+  }
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('btnRecord').addEventListener('click', startRecording); document.getElementById('btnPause').addEventListener('click', pauseRecording); document.getElementById('btnStop').addEventListener('click', stopRecording); document.getElementById('btnStopPaused').addEventListener('click', stopRecording); document.getElementById('btnPlayCurrent').addEventListener('click', playCurrentBlob); document.getElementById('btnSave').addEventListener('click', saveRecording); document.getElementById('btnDiscard').addEventListener('click', discardCurrent); document.getElementById('btnNew').addEventListener('click', resetToIdle); document.getElementById('btnResume').addEventListener('click', resumeRecording);
+  document.getElementById('sortSelect').addEventListener('change', renderList); document.getElementById('searchInput').addEventListener('input', renderList);
+  document.getElementById('btnExportAll').addEventListener('click', exportAllRecordings); document.getElementById('btnBackupExport').addEventListener('click', exportBackup); document.getElementById('btnBackupImport').addEventListener('click', () => { document.getElementById('backupFileInput').click(); }); document.getElementById('backupFileInput').addEventListener('change', importBackup);
+  document.getElementById('loopBtn').addEventListener('click', toggleLoop); document.getElementById('spd05').addEventListener('click', () => setSpeed(0.5)); document.getElementById('spd1').addEventListener('click', () => setSpeed(1)); document.getElementById('spd15').addEventListener('click', () => setSpeed(1.5)); document.getElementById('spd2').addEventListener('click', () => setSpeed(2));
+  document.getElementById('recordingsList').addEventListener('click', e => { const btn = e.target.closest('[data-action]'); if (!btn) return; const id = parseInt(btn.dataset.id, 10); const action = btn.dataset.action; if (action === 'play') togglePlayRec(id); else if (action === 'download') downloadRec(id); else if (action === 'rename') startRename(id); else if (action === 'delete') deleteRec(id); });
+  document.addEventListener('keydown', handleKeydown); initGestures(); animateIdle();
+
+  if (navigator.storage?.persist) { const granted = await navigator.storage.persist(); if (!granted) showToast('⚠️ قد يحذف المتصفح البيانات مستقبلاً لتوفير المساحة'); }
+  navigator.permissions?.query({ name: 'microphone' }).then(s => { const sub = document.getElementById('sysSubtitle'); if (s.state === 'denied' && sub) { sub.textContent = '⚠️ الميكروفون محظور من إعدادات المتصفح'; sub.classList.add('warn'); } s.onchange = () => location.reload(); }).catch(()=>{});
+  document.addEventListener('visibilitychange', () => { if (document.hidden && App.state === 'recording') showToast('🎙 يتم التسجيل في الخلفية'); });
+  window.addEventListener('beforeunload', () => { revokeCurrentUrl(); revokePlayingUrl(); App.currentBlob = null; if (App.audioCtx) App.audioCtx.close(); });
+
+  try { db = await openDB(); const all = await dbGetAll(); App.recordings = all.map(r => ({ id: r.id, name: r.name, duration: r.duration, date: r.date })); if (App.recordings.length > 0) App.everRecorded = true; renderList(); updateStorage(); } catch(e) { showToast('⚠️ خطأ في تهيئة قاعدة البيانات'); }
+});
+</script>
+</body>
+</html>
+<!-- END OF FILE -->
